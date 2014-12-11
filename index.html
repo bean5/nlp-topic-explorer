@@ -1,0 +1,80 @@
+<html>
+  <title>Document Topic Index</title>
+  <script src="jquery-latest.min.js"></script>
+  <script src="compute-rank-documents-in-each-topic-out.js"></script>
+  <script>
+  $(function() {
+    var baseURL = 'files/';
+
+    if(documentType == 'Talk') {
+      baseURL = 'https://scriptures.byu.edu/content/talks_ajax/';
+      $('.documentOrTalk').text('Talk');
+      $('title').text('Talk Topic Index');
+    }
+
+    var $topics = $('#topics');
+    $.each(topicDocumentData, function(i, data) {
+      data.keyWords = data.keyWords.splice(0, data.keyWords.length-1);
+      var li = $('<li>');
+      li.addClass('topic');
+      li.prop('topic_id', i);
+      li.html('<strong>words</strong>: <i class="clickable">' + data.keyWords.join(', ') + '</i><br /><span style="color: green;">[<strong>probability</strong>: ' + data.value + ']</span>');
+
+      // if(i < 20)
+      $topics.append(li);
+    });
+    $('.topic').on('click', function() {
+      $('body').animate({scrollTop: 0}, 'fast');
+      var $el = $(this);
+      var docs = topicDocumentData[$el.prop('topic_id')].documents.concat().splice(0, 100);
+      // console.log(docs);
+      var $docs = $('#docs');
+      $docs.html('').parent().show();
+      $.each(docs, function(i, doc) {
+        // console.log(doc);
+        // console.log(documentMetaData[doc.mallet_id]);
+        var talkID = parseInt(documentMetaData[doc.mallet_id].fileName.match(/(\d+)(\.html)/i)[1]);
+
+        var fileNameOrTitle = (documentMetaData[doc.mallet_id].title != undefined) ? documentMetaData[doc.mallet_id].title : documentMetaData[doc.mallet_id].fileName.replace(/.*\//g, '');
+
+        $docs.append('<li class="doc" talkID="' + talkID + '" mallet_id="' + doc.mallet_id + '"><span class="clickable">' + fileNameOrTitle + '</span><br /><span style="color:green;">[<strong>weight</strong>: ' + doc.distance + ']</span>' + '</li>');
+        // return false;
+      });
+
+      $('.doc').on('click', function() {
+        $('body').animate({scrollTop: 0}, 'fast');
+        var location = baseURL + $(this).attr('talkID');
+        $('#link').text(location);
+        $('#link').attr('href', location);
+
+        $.get(location, function(data) {
+          // Need to replace image paths because they are not absolute at this resource
+          $('#selectedDoc').html(data.replace('images/', 'https://scriptures.byu.edu/images/')).parent().show();
+          // Remove boilerplate
+          $('#selectedDoc #centernavbar').remove();
+        });
+      });
+    });
+  });
+  </script>
+  <style>
+    h2 {color: gray;}
+    .clickable {cursor: pointer;}
+  </style>
+  <body>
+    <h1><span class="documentOrTalk">Document</span> Topic Index</h1>
+    <div style="width:30%; float: left;">
+      <h2>Topics (word clusters)</h2>
+      <ul id="topics"></ul>
+    </div>
+    <div style="width:28%; float: left; padding-left: 50px; display: none;">
+      <h2><span class="documentOrTalk">Document</span>s<!-- Yes, strand the s --> Sorted by Topic</h2>
+      <ul id="docs"></ul>
+    </div>
+    <div style="width:18%; float: left; padding-left: 50px; display: none;">
+      <h2>Selected <span class="documentOrTalk">Documents</span></h2>
+      <p>Link: <a id="link"></a></p>
+      <div id="selectedDoc" width="600" height="700"></div>
+    </div>
+  </body>
+</html>
